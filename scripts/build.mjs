@@ -14,6 +14,9 @@ writeFileSync(path(output+'runtime.json'),JSON.stringify(runtime,null,2)+'\n');
 const common={bundle:true,format:'esm',platform:'browser',target:'es2022',legalComments:'eof'};
 await build({...common,entryPoints:[path('packages/core/src/index.ts')],outfile:path(output+'index.js')});
 await build({...common,entryPoints:[path('packages/core/src/workers/separation-worker.ts')],outfile:path(output+'separation-worker.js'),minify:true,alias:{'onnxruntime-web':'onnxruntime-web/webgpu'},define:{__RUNTIME__:JSON.stringify(runtime)}});
+for(const file of ['LICENSE','THIRD_PARTY_NOTICES.md','README.md'])copyFileSync(path(file),path('packages/core/'+file));
+cpSync(path('docs/licenses'),path('packages/core/dist/licenses'),{recursive:true});
+if(process.argv.includes('--core-only')){console.log('Independent SDK built without the Studio.');process.exit(0);}
 mkdirSync(path('dist/studio'),{recursive:true});cpSync(path('packages/core/dist'),path('dist/studio/engine'),{recursive:true});
 await build({...common,entryPoints:[path('apps/studio/src/main.ts')],outfile:path('dist/studio/studio.js'),plugins:[{name:'public-sdk',setup(builder){builder.onResolve({filter:/^@lilith\/audio-engine$/},()=>({path:'./engine/index.js',external:true}));}}]});
 copyFileSync(path('apps/studio/public/index.html'),path('dist/studio/index.html'));

@@ -14,6 +14,7 @@ Use Node 24 LTS and npm. Versions are locked. Installation scripts are unnecessa
 npm ci --ignore-scripts
 npm run typecheck
 npm run lint
+npm run build:core # SDK without building Studio
 npm run build
 npm test
 npm run dev
