@@ -18,7 +18,7 @@ export const ENGLISH={
 export type StudioStrings=typeof ENGLISH;
 export function mountStudio(root:HTMLElement,overrides:Partial<StudioStrings>={},options:SeparatorOptions={}) {
   const t={...ENGLISH,...overrides};let engine:SeparationEngine|undefined,result:SeparationResult|undefined,player:SynchronizedPlayer|undefined;
-  let file:File|undefined,controller:AbortController|undefined,busy=false,generation=0,frame=0,destroyed=false;
+  let file:File|undefined,processedFile:File|undefined,processedBackend='',controller:AbortController|undefined,busy=false,generation=0,frame=0,destroyed=false;
   const urls=new Set<string>(),timers=new Set<ReturnType<typeof setTimeout>>();
   const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text?:string,cls?:string)=>{const node=document.createElement(tag);if(text)node.textContent=text;if(cls)node.className=cls;return node;};
   const card=el('section',undefined,'audio-card'),label=el('h2',t.upload),drop=el('div',undefined,'drop-area');
@@ -50,7 +50,7 @@ export function mountStudio(root:HTMLElement,overrides:Partial<StudioStrings>={}
   const setBusy=(value:boolean)=>{busy=value;start.disabled=value;cancel.disabled=!value;clear.disabled=value;input.disabled=value;select.disabled=value;backend.disabled=value;progress.hidden=!value;root.setAttribute('aria-busy',String(value));};
   const time=(seconds:number)=>`${Math.floor(seconds/60)}:${String(Math.floor(seconds%60)).padStart(2,'0')}`;
   const download=(blob:Blob,name:string)=>{const url=URL.createObjectURL(blob);urls.add(url);const link=el('a');link.href=url;link.download=name;root.append(link);link.click();link.remove();const timer=setTimeout(()=>{URL.revokeObjectURL(url);urls.delete(url);timers.delete(timer);},60000);timers.add(timer);};
-  const clearResults=async()=>{cancelAnimationFrame(frame);await player?.dispose();player=undefined;result?.dispose();result=undefined;output.replaceChildren();output.hidden=true;};
+  const clearResults=async()=>{cancelAnimationFrame(frame);await player?.dispose();player=undefined;result?.dispose();result=undefined;processedFile=undefined;output.replaceChildren();output.hidden=true;};
   const report=(event:ProgressEvent)=>{
     const names:Record<string,string>={'decoding':t.decoding,'model-download':event.cached?t.cached:t.download,'model-verify':t.verify,'runtime':t.runtime,'model-load':t.loading,'preparing-tensors':t.tensors,'inference':t.inference,'reconstructing':t.reconstructing,'ready':t.complete,'cpu-fallback':t.fallback};
     status.textContent=(names[event.stage]??t.working)+(event.completed!==undefined?` · ${event.completed}/${event.total}`:event.loaded!==undefined&&!event.cached?` · ${(event.loaded/1e6).toFixed(1)} / ${((event.total??0)/1e6).toFixed(1)} MB`:'');
@@ -81,9 +81,10 @@ export function mountStudio(root:HTMLElement,overrides:Partial<StudioStrings>={}
   }
   start.onclick=async()=>{
     if(busy)return;if(!file){status.textContent=t.empty;input.focus();return;}
+    if(result&&processedFile===file&&processedBackend===backend.value&&result.metadata.model===select.value){output.scrollIntoView({block:'start'});status.textContent=t.complete;return;}
     setBusy(true);controller=new AbortController();const token=++generation;
     try{await clearResults();await engine?.dispose();engine=await createSeparator({model:select.value,backend:backend.value as 'auto'|'wasm'|'webgpu',maxDuration:60,maxFileBytes:24*1024*1024,...options});
-      const value=await engine.separate(file,{signal:controller.signal,onProgress:report});if(token!==generation||destroyed){value.dispose();return;}await showResults(value);status.textContent=t.complete;void updateStorage();
+      const value=await engine.separate(file,{signal:controller.signal,onProgress:report});if(token!==generation||destroyed){value.dispose();return;}await showResults(value);processedFile=file;processedBackend=backend.value;status.textContent=t.complete;void updateStorage();
     }catch(error){if(!destroyed){const code=error instanceof Error&&'code' in error?String(error.code):'';const messages:Record<string,string>={ABORTED:t.canceled,LIMIT:t.limitError,DECODE:t.decodeError,MODEL:t.modelError,INTEGRITY:t.modelError,RUNTIME:t.runtimeError,WORKER:t.runtimeError,UNSUPPORTED:t.browserError};status.textContent=messages[code]??t.failed;}}
     finally{if(!destroyed)setBusy(false);}
   };
