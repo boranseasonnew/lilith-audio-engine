@@ -1,0 +1,11 @@
+node_modules/
+dist/
+packages/core/dist/
+apps/studio/public/engine/
+test-results/
+*.onnx
+*.ckpt
+*.wav
+*.flac
+*.zip
+.env*

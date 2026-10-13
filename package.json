@@ -1,0 +1,31 @@
+{
+  "name": "lilith-audio-engine-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/core",
+    "apps/studio"
+  ],
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/serve.mjs",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.studio.json",
+    "lint": "node scripts/lint.mjs",
+    "test": "node --test packages/core/tests/*.test.mjs",
+    "test:inference": "node scripts/inference-test.mjs",
+    "format": "node scripts/lint.mjs --write"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12",
+    "playwright": "1.64.0",
+    "typescript": "7.0.2"
+  },
+  "dependencies": {
+    "onnxruntime-web": "1.30.0",
+    "web-audio-separation": "0.3.1"
+  }
+}

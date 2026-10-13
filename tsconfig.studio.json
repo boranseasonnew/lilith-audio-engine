@@ -1,0 +1,1 @@
+{"extends":"./tsconfig.json","compilerOptions":{"rootDir":".","noEmit":true,"paths":{"@lilith/audio-engine":["./packages/core/src/index.ts"]}},"include":["apps/studio/src/main.ts","apps/studio/src/studio.ts"]}

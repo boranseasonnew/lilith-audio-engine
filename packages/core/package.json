@@ -1,0 +1,25 @@
+{
+  "name": "@lilith/audio-engine",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "sideEffects": false,
+  "engines": {
+    "node": ">=24"
+  },
+  "peerDependencies": {
+    "onnxruntime-web": "1.30.0"
+  }
+}

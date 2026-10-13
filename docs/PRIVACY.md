@@ -1,0 +1,3 @@
+# Privacy
+
+The SDK reads File/Blob input locally and transfers decoded PCM to a same-origin worker. No POST, remote audio request, telemetry or persistent audio storage is used. The only remote traffic is a public model download from Hugging Face and its CDN; downloads reveal normal networking metadata. SHA-256 and size are verified before loading. Model cache can be inspected/removed. Runtime assets are hosted locally. Temporary PCM, worker heaps, playback nodes and export URLs are released on cancellation/replacement/disposal. AudioContext owns an additional PCM copy during playback. Exported files remain on the user's device. The development inference fixture remains outside the Git repository.

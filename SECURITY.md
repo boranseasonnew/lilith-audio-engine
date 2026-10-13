@@ -1,0 +1,3 @@
+# Security
+
+Do not post private media, credentials or sensitive data in public issues. Report non-sensitive reproducible bugs to the repository maintainer; a private reporting channel is not yet established and is not claimed. Models use HTTPS, pinned sizes and SHA-256 checks. Only trusted compiled adapters execute. No audio upload route exists in the SDK or Studio. The preview server only supports GET/HEAD. Model hosting sees normal download metadata such as client IP; local inference does not mean zero network access. Model integrity is not a general defense against browser/runtime vulnerabilities. Keep browser and runtime patched. Resource and decoder limits reduce accidental exhaustion but malicious codec headers can still allocate before duration validation.
