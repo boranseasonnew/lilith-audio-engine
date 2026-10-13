@@ -15,7 +15,8 @@ try{
   await page.getByRole('button',{name:'Separate audio',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('.status')?.textContent==='Ready for playback'||document.querySelector('.status')?.textContent?.startsWith('Unable to process'),null,{timeout:10*60*1000});
   assert.equal(await page.locator('.status').textContent(),'Ready for playback');assert.equal(await page.locator('canvas').count(),2);
-  await page.getByRole('button',{name:'Play Both',exact:true}).click();await page.waitForTimeout(1400);
+  await page.getByRole('button',{name:'Play Both',exact:true}).click();
+  await page.waitForFunction(()=>{const clock=document.querySelector('.player-controls span');return clock&&!clock.textContent.startsWith('0:00');},null,{timeout:15000});
   assert.ok(!(await page.locator('.player-controls').first().locator('span').first().textContent()).startsWith('0:00'));
   const pause=page.getByRole('button',{name:'Pause Both',exact:true});if(await pause.count())await pause.click();
   await page.locator('.stem-card > input').first().fill('2');await page.locator('.stem-card > input').first().dispatchEvent('input');
