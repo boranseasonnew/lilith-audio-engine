@@ -2,7 +2,7 @@ import type { DecodedAudio, SeparatorOptions } from '../types.js';
 import { AudioEngineError,checkAbort } from '../utils/errors.js';
 export function validateInput(file: Blob, options: SeparatorOptions): void {
   if(!(file instanceof Blob)||!file.size)throw new AudioEngineError('DECODE','Choose a nonempty audio file.');
-  if(file.size>(options.maxFileBytes??24*1024*1024))throw new AudioEngineError('LIMIT','File exceeds the configured memory-safe limit.');
+  if(file.size>(options.maxFileBytes??96*1024*1024))throw new AudioEngineError('LIMIT','File exceeds the configured memory-safe limit.');
 }
 async function durationHint(file: Blob, signal?: AbortSignal): Promise<number> {
   if(typeof document==='undefined')return NaN;
@@ -20,7 +20,7 @@ async function durationHint(file: Blob, signal?: AbortSignal): Promise<number> {
 }
 export async function decodeAudio(file: Blob, rate: number, options: SeparatorOptions, signal?: AbortSignal): Promise<DecodedAudio> {
   checkAbort(signal);validateInput(file,options);
-  const max=options.maxDuration??60, hint=await durationHint(file,signal);checkAbort(signal);
+  const max=options.maxDuration??240, hint=await durationHint(file,signal);checkAbort(signal);
   if(Number.isFinite(hint)&&hint>max)throw new AudioEngineError('LIMIT',`Audio must be ${max} seconds or shorter.`);
   const bytes=await file.arrayBuffer();checkAbort(signal);
   // decodeAudioData resamples into this context's rate, without playing sound.

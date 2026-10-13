@@ -25,7 +25,7 @@ export class SeparationEngine {
       report({stage:'decoding'});const audio=await decodeAudio(file,this.model.sampleRate,this.options,controller.signal);checkAbort(controller.signal);
       const output=await new Promise<WorkerResult>((resolve,reject)=>{
         const worker=new Worker(this.options.workerUrl??new URL('./separation-worker.js',import.meta.url),{type:'module'});this.worker=worker;
-        const timer=setTimeout(()=>fail(new AudioEngineError('WORKER','Inference exceeded 30 minutes. Try a shorter file.')),30*60*1000);
+        const timer=setTimeout(()=>fail(new AudioEngineError('WORKER','Inference exceeded 60 minutes. Try a shorter file.')),60*60*1000);
         const cleanup=()=>{clearTimeout(timer);controller.signal.removeEventListener('abort',abort);worker.terminate();this.worker=undefined;};
         const fail=(error:Error)=>{cleanup();reject(error);};
         const abort=()=>fail(new AudioEngineError('ABORTED','Operation canceled.'));controller.signal.addEventListener('abort',abort,{once:true});

@@ -47,7 +47,7 @@ result.dispose();
 await separator.dispose();
 ```
 
-No model is downloaded by `createSeparator`. Browser codec support determines accepted input; mono and stereo are supported. Defaults: 24 MiB compressed input, 60 seconds decoded audio. Explicit opt-in up to 300 seconds is possible but not validated as mobile safe. WAV export is genuine stereo PCM16. ZIP contains two separate sanitized WAV filenames. Audio is not persisted. The model-only cache is integrity-checked and removable through `storageInfo` / `clearCache`.
+No model is downloaded by `createSeparator`. Browser codec support determines accepted input; mono and stereo are supported. Defaults: 96 MiB compressed input, 240 seconds (four minutes) decoded audio. Longer files require explicit configuration and are not validated. Four-minute processing is not a mobile-memory safety guarantee. WAV export is genuine stereo PCM16. ZIP contains two separate sanitized WAV filenames. Audio is not persisted. The model-only cache is integrity-checked and removable through `storageInfo` / `clearCache`.
 
 ## Architecture
 

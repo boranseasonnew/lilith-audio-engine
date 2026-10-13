@@ -4,7 +4,8 @@ export default async function browserCase(page,fixture){
   try{
     await page.goto('http://127.0.0.1:3340/');
     if(requests.some(r=>r.url.includes('huggingface.co')))throw Error('Eager model download.');
-    await page.locator('input[type=file]').setInputFiles(fixture);await page.getByRole('button',{name:'Separate audio',exact:true}).click();
+    if(await page.locator('.configuration-panel').isVisible())throw Error('Options must stay hidden before upload.');
+    await page.locator('input[type=file]').setInputFiles(fixture);if(!await page.locator('.configuration-panel').isVisible())throw Error('Options must open after upload.');await page.getByRole('button',{name:'Separate audio',exact:true}).click();
     await page.waitForFunction(()=>document.querySelector('.status')?.textContent==='Ready for playback'||document.querySelector('.status')?.textContent?.startsWith('Unable to process'),null,{timeout:600000});
     if(await page.locator('.status').textContent()!=='Ready for playback')throw Error(await page.locator('.status').textContent());
     if(await page.locator('canvas').count()!==2)throw Error('Waveforms missing.');

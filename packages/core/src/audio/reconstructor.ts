@@ -1,7 +1,7 @@
 import type { Stereo } from '../types.js';
 import { AudioEngineError } from '../utils/errors.js';
-export function reconstruct(mix: Stereo, prediction: Stereo, compensation: number): {vocals:Stereo;instrumental:Stereo;gain:number} {
-  const vocals:Stereo=[new Float32Array(mix[0].length),new Float32Array(mix[0].length)];
+export function reconstruct(mix: Stereo, prediction: Stereo, compensation: number, reusePrediction=false): {vocals:Stereo;instrumental:Stereo;gain:number} {
+  const vocals:Stereo=reusePrediction?prediction:[new Float32Array(mix[0].length),new Float32Array(mix[0].length)];
   const instrumental:Stereo=[new Float32Array(mix[0].length),new Float32Array(mix[0].length)];let peak=1;
   for(let ch=0;ch<2;ch++){
     if(!mix[ch].length||mix[ch].length!==prediction[ch].length)throw new AudioEngineError('OUTPUT','Incorrect output dimensions.');

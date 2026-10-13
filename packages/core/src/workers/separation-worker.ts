@@ -14,7 +14,7 @@ scope.onmessage=async({data}:{data:{model:string;backend:Backend;channels:Stereo
     const model=getModel(data.model);adapter.validate(data.channels);
     const bytes=await loadModel(model,data.cache,report),init=await initializeInference(bytes,model,data.backend,report);session=init.session;
     const started=performance.now(),prediction=await adapter.infer(session,data.channels,report);
-    report({stage:'reconstructing'});const stems=reconstruct(data.channels,prediction,model.preprocessing.compensation);
+    report({stage:'reconstructing'});const stems=reconstruct(data.channels,prediction,model.preprocessing.compensation,true);
     await session.release();session=undefined;adapter.dispose();
     scope.postMessage({type:'done',...stems,backend:init.backend,inferenceSeconds:(performance.now()-started)/1000},
       [...stems.vocals,...stems.instrumental].map(channel=>channel.buffer));

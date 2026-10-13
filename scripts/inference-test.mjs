@@ -11,6 +11,7 @@ try{
   await page.goto(process.env.LILITH_TEST_URL??'http://127.0.0.1:3340/');
   assert.ok(requests.every(r=>!r.url.includes('huggingface.co')),'No model request before user action');
   await page.locator('input[type=file]').setInputFiles(fixture);
+  await page.locator('.engine-settings summary').click();
   const backend=process.env.LILITH_TEST_BACKEND??'auto';await page.locator('select').nth(1).selectOption(backend);
   await page.getByRole('button',{name:'Separate audio',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('.status')?.textContent==='Ready for playback'||document.querySelector('.status')?.textContent?.startsWith('Unable to process'),null,{timeout:10*60*1000});

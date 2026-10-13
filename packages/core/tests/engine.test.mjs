@@ -4,8 +4,8 @@ import {build} from 'esbuild';
 import {mkdirSync,readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 const root=new URL('../../../',import.meta.url);mkdirSync(new URL('test-results/',root),{recursive:true});
-await build({stdin:{contents:"export {planChunks,hann} from './packages/core/src/audio/chunker.ts'; export {reconstruct} from './packages/core/src/audio/reconstructor.ts'; export {validateInput} from './packages/core/src/audio/decoder.ts'; export {checkAbort} from './packages/core/src/utils/errors.ts'; export {verifyModel} from './packages/core/src/runtime/model-cache.ts';",resolveDir:fileURLToPath(root)},bundle:true,format:'esm',platform:'node',outfile:fileURLToPath(new URL('test-results/unit.js',root))});
-const {planChunks,hann,reconstruct,validateInput,checkAbort,verifyModel}=await import(new URL('test-results/unit.js',root));
+await build({stdin:{contents:"export {planChunks,hann} from './packages/core/src/audio/chunker.ts'; export {reconstruct} from './packages/core/src/audio/reconstructor.ts'; export {validateInput,decodeAudio} from './packages/core/src/audio/decoder.ts'; export {checkAbort} from './packages/core/src/utils/errors.ts'; export {verifyModel} from './packages/core/src/runtime/model-cache.ts';",resolveDir:fileURLToPath(root)},bundle:true,format:'esm',platform:'node',outfile:fileURLToPath(new URL('test-results/unit.js',root))});
+const {planChunks,hann,reconstruct,validateInput,decodeAudio,checkAbort,verifyModel}=await import(new URL('test-results/unit.js',root));
 const {encodeWav,zipStems,safeFilename,waveformPeaks,listModels,validateManifest,createSeparator,SynchronizedPlayer,ModelRegistry}=await import('../dist/index.js');
 const stereo=(array)=>[new Float32Array(array),new Float32Array(array)];
 test('only implemented model is selectable, manifest pinned',()=>{assert.equal(listModels().length,1);const m=listModels()[0];validateManifest(m);assert.equal(m.sizeBytes,66762490);assert.match(m.modelUrl,/fddec396/);assert.equal(m.preprocessing.frames,256);});
@@ -33,3 +33,18 @@ const fakeResult=()=>({vocals:{channels:stereo(Array(441).fill(.1)),sampleRate:4
 test('mock-clock playback schedules BOTH stems at identical timestamp/offset',async()=>{const f=fakeContext(),p=new SynchronizedPlayer(fakeResult(),f.context);await p.seek(2);await p.play('both');assert.equal(f.starts.length,2);assert.deepEqual(f.starts[0],f.starts[1]);assert.equal(f.starts[0].offset,2);f.context.currentTime=3.03;assert.ok(Math.abs(p.currentTime-4)<1e-6);p.pause();assert.ok(f.nodes.every(n=>n.stopped));await p.dispose();assert.equal(f.context.state,'closed');});
 test('mock-clock repeated seeks restart both with identical offset, no duplicated sessions',async()=>{const f=fakeContext(),p=new SynchronizedPlayer(fakeResult(),f.context);await p.play('both');await p.seek(4);await p.seek(6);assert.equal(f.starts.length,6);assert.deepEqual(f.starts.slice(-2),[{when:1.03,offset:6},{when:1.03,offset:6}]);assert.ok(f.nodes.slice(0,-2).every(n=>n.stopped));await p.dispose();await assert.rejects(()=>p.play());});
 test('runtime assets each fit Pages limit and full notices included',()=>{for(const entry of readdirSync(new URL('../dist/runtime/',import.meta.url)))assert.ok(readFileSync(new URL('../dist/runtime/'+entry,import.meta.url)).length<=25*1024*1024);assert.ok(readFileSync(new URL('../dist/licenses/onnxruntime-ThirdPartyNotices.txt',import.meta.url)).length>300000);});
+
+test('default file ceiling accepts 96 MiB and rejects one byte more',()=>{
+  const file=new Blob(['x']);Object.defineProperty(file,'size',{value:96*1024*1024,configurable:true});validateInput(file,{});
+  Object.defineProperty(file,'size',{value:96*1024*1024+1});assert.throws(()=>validateInput(file,{}),e=>e.code==='LIMIT');
+});
+test('mock decoder accepts exactly four minutes and rejects longer audio',async()=>{
+  const original=globalThis.OfflineAudioContext;let duration=240;
+  globalThis.OfflineAudioContext=class {async decodeAudioData(){return {duration,length:duration,sampleRate:1,numberOfChannels:2,getChannelData:()=>new Float32Array(duration)};}};
+  try{const file=new Blob(['x']);const decoded=await decodeAudio(file,1,{});assert.equal(decoded.duration,240);duration=241;await assert.rejects(()=>decodeAudio(file,1,{}),e=>e.code==='LIMIT');}
+  finally{if(original)globalThis.OfflineAudioContext=original;else delete globalThis.OfflineAudioContext;}
+});
+test('reuse reconstruction keeps prediction buffers and matches copied output',()=>{
+  const mix=stereo([.1,-.4,.9]),prediction=stereo([.3,-.7,1.2]);const copied=reconstruct(mix,prediction,1.021);
+  const reused=reconstruct(mix,prediction,1.021,true);assert.equal(reused.vocals,prediction);assert.deepEqual(reused.vocals,copied.vocals);assert.deepEqual(reused.instrumental,copied.instrumental);assert.equal(reused.gain,copied.gain);
+});
