@@ -16,10 +16,10 @@ export interface ProgressEvent {
 export interface AudioStem { channels: Stereo; sampleRate: number; duration: number; }
 export interface SeparationResult {
   vocals: AudioStem; instrumental: AudioStem;
-  metadata: { model: string; backend: Exclude<Backend,'auto'>; inferenceSeconds: number; gain: number };
+  metadata: { model: string; backend: Exclude<Backend,'auto'>; inferenceSeconds: number; setupSeconds?: number; totalSeconds?: number; modelReused?: boolean; gain: number };
   exportWav(stem: StemName): Blob;
   exportZip(filename?: string): Promise<Blob>;
   dispose(): void;
 }
-export interface SeparatorOptions { model?: string; backend?: Backend; maxDuration?: number; range?: {start:number;duration:number}; exportWorkerUrl?: string | URL; maxFileBytes?: number; workerUrl?: string | URL; cache?: boolean; }
-export interface JobOptions { signal?: AbortSignal; onProgress?: (event: ProgressEvent) => void; }
+export interface SeparatorOptions { model?: string; backend?: Backend; maxDuration?: number; range?: {start:number;duration:number}; exportWorkerUrl?: string | URL; maxFileBytes?: number; workerUrl?: string | URL; cache?: boolean; idleTimeoutMs?: number; }
+export interface JobOptions { range?: {start:number;duration:number}; signal?: AbortSignal; onProgress?: (event: ProgressEvent) => void; }

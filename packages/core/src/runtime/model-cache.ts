@@ -24,14 +24,14 @@ export async function loadModel(model:AudioModelManifest, useCache:boolean, repo
     if(performance.now()-last>120||loaded===model.sizeBytes){report({stage:'model-download',loaded,total:model.sizeBytes,progress:loaded/model.sizeBytes});last=performance.now();}
   }}catch(error){await reader.cancel().catch(()=>{});throw error;}finally{reader.releaseLock();}
   report({stage:'model-verify'});await verifyModel(bytes.buffer,model);
-  if(cache)try{await cache.put(model.modelUrl,new Response(bytes));}catch{report({stage:'model-load',warning:'Model cache quota exceeded; inference can continue.'});}
+  if(cache)try{await cache.put(model.modelUrl,new Response(bytes,{headers:{'Content-Length':String(model.sizeBytes)}}));}catch{report({stage:'model-load',warning:'Model cache quota exceeded; inference can continue.'});}
   return bytes.buffer;
 }
 export async function modelStorage():Promise<{cachedBytes:number;usage?:number;quota?:number}> {
   let cachedBytes=0;
   if(typeof caches!=='undefined'&&await caches.has(MODEL_CACHE)){
     const cache=await caches.open(MODEL_CACHE);for(const request of await cache.keys()){
-      const response=await cache.match(request);if(response)cachedBytes+=(await response.blob()).size;
+      const response=await cache.match(request);if(response){const declared=Number(response.headers.get('Content-Length'));cachedBytes+=Number.isSafeInteger(declared)&&declared>0?declared:(await response.blob()).size;}
     }
   }
   const estimate=await navigator.storage?.estimate();return {cachedBytes,usage:estimate?.usage,quota:estimate?.quota};

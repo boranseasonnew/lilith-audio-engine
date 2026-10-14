@@ -18,7 +18,7 @@ export class MdxAdapter implements ModelAdapter {
     const length=mix[0].length,results=[new Float32Array(length),new Float32Array(length)],weights=new Float32Array(length),window=hann(chunkSize);
     // STFT helper by Dan Kurtz: reflect padding, periodic Hann, packed complex stereo,
     // low-bin mask matching UVR, and normalized ISTFT. No upstream separation controller is used.
-    const fft=new PffftSTFT(p.fft,p.hop,p.bins);this.fft=fft;await fft.init();let completed=0;
+    if(!this.fft){this.fft=new PffftSTFT(p.fft,p.hop,p.bins);await this.fft.init();}const fft=this.fft;let completed=0;
     const chunk=new Float32Array(chunkSize*2);
     for(const start of starts){
       report({stage:'preparing-tensors'});

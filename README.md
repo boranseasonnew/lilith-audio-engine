@@ -83,3 +83,7 @@ Original source MIT; third-party libraries and weights keep their own terms. Ful
 ## Automatic Studio and additional exports
 
 Selecting a file starts one AI job for both stems. No manual action or model selector. `player.playStem(name)` joins the shared playback clock; `pauseStem(name)` leaves the other stem playing. `exportAudio(result.vocals, 'mp3', {signal,onProgress})` and `exportAudio(result.instrumental, 'flac')` retain the original PCM. Keep all generated lazy modules and the `audio-export-worker.js` file when hosting the SDK. The export worker requires its own WASM compilation permission and blob child-worker permission; ordinary HTML does not. Exact third-party codec source and license packaging is included. See [automatic workflow and validation](docs/AUTOMATIC_AUDIO_WORKFLOW.md).
+
+### Consecutive tracks
+
+Keep one separator instance for consecutive tracks. It reuses its verified model, ONNX session and FFT workspace, while keeping each track’s PCM separate. The worker is released after two idle minutes (configurable with `idleTimeoutMs`, from one second to five minutes), on cancellation, or on `dispose()`. A persistent browser model cache survives worker release when storage is available. Every new track still requires inference; a warm model does not make AI processing instantaneous. Call `result.dispose()` to release returned PCM.
