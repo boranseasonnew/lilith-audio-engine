@@ -47,7 +47,7 @@ result.dispose();
 await separator.dispose();
 ```
 
-No model is downloaded by `createSeparator`. Browser codec support determines accepted input; mono and stereo are supported. Defaults: 96 MiB compressed input, 240 seconds (four minutes) decoded audio. Longer files require explicit configuration and are not validated. Four-minute processing is not a mobile-memory safety guarantee. WAV export is genuine stereo PCM16. ZIP contains two separate sanitized WAV filenames. Audio is not persisted. The model-only cache is integrity-checked and removable through `storageInfo` / `clearCache`.
+No model is downloaded by `createSeparator`. Browser codec support determines accepted input; mono and stereo are supported. Defaults: 96 MiB compressed input, 240 seconds (four minutes) decoded audio. Studio offers an explicit section of up to four minutes for longer files; the SDK supports `range:{start,duration}`. Native codec support is needed for compressed range decoding. Longer whole-file jobs require explicit configuration and are not validated. Four-minute processing is not a mobile-memory safety guarantee. WAV export is genuine stereo PCM16. ZIP contains two separate sanitized WAV filenames. Audio is not persisted. The model-only cache is integrity-checked and removable through `storageInfo` / `clearCache`.
 
 ## Architecture
 
@@ -57,7 +57,7 @@ No model is downloaded by `createSeparator`. Browser codec support determines ac
 - `runtime`: verified lazy model download, model cache, ORT backend selection.
 - `workers`: real neural inference away from the UI thread.
 - `playback`: shared AudioContext timeline; stems start at the exact same timestamp/offset, independent gains.
-- `export`: correct PCM16 WAV headers and uncompressed two-file ZIP with CRC32.
+- `export`: PCM16 WAV, WAV ZIP with CRC32, and lazy MP3/FLAC worker encoding with independent cancellation.
 - `apps/studio`: lightweight TypeScript UI consuming only the public SDK.
 
 UVR-MDX-NET-Voc_FT predicts vocals; instrumental = original mixture − compensated vocal estimate. Both outputs receive one common peak gain if needed to prevent clipping. Stereo, length and alignment are preserved. Spectral preprocessing uses Dan Kurtz's MIT PFFFT helper, not an imported separation controller. No EQ filtering is presented as separation.
@@ -66,7 +66,7 @@ UVR-MDX-NET-Voc_FT predicts vocals; instrumental = original mixture − compensa
 
 Secure contexts, module workers, WebAssembly SIMD and Web Audio are required. WebGPU is feature-detected; Auto can use WASM fallback. A user's requested WebGPU-only job fails clearly rather than silently reporting CPU as GPU. Single-thread WASM avoids imposing COOP/COEP on host websites. First operation downloads ~66.8 MB model plus ~26.8 MB runtime. Runtime is browser HTTP cached; model caching is optional and quota failures are reported.
 
-Whole-file browser decoding still allocates PCM before inference. Metadata validation helps reject long compressed files, but a malicious header cannot guarantee absence of decoder memory spikes. Web Audio decoding itself cannot be forcibly interrupted; cancellation rejects its result after completion. Worker download/inference cancellation is immediate via termination. MP3/FLAC/M4A export is not implemented. Safari, real Android hardware, perceptual quality and mobile memory ceiling remain unverified. No claim of UVR Online parity or realtime performance.
+Whole-file browser decoding still allocates PCM before inference. Metadata validation helps reject long compressed files, but a malicious header cannot guarantee absence of decoder memory spikes. Web Audio decoding itself cannot be forcibly interrupted; cancellation rejects its result after completion. Worker download/inference cancellation is immediate via termination. MP3 256 kbps and FLAC 24-bit exports use the official Mediabunny encoders in a lazily loaded worker. M4A export is not implemented. Safari, real Android hardware, perceptual quality and mobile memory ceiling remain unverified. No claim of UVR Online parity or realtime performance.
 
 ## Tests
 
@@ -79,3 +79,7 @@ Complete browser/device and listening evaluation, publish an approved integratio
 ## Licensing
 
 Original source MIT; third-party libraries and weights keep their own terms. Full third-party notice packaging is a release gate; see `THIRD_PARTY_NOTICES.md`. Lilith Software is a brand designation, not a claim of incorporation.
+
+## Automatic Studio and additional exports
+
+Selecting a file starts one AI job for both stems. No manual action or model selector. `player.playStem(name)` joins the shared playback clock; `pauseStem(name)` leaves the other stem playing. `exportAudio(result.vocals, 'mp3', {signal,onProgress})` and `exportAudio(result.instrumental, 'flac')` retain the original PCM. Keep all generated lazy modules and the `audio-export-worker.js` file when hosting the SDK. The export worker requires its own WASM compilation permission and blob child-worker permission; ordinary HTML does not. Exact third-party codec source and license packaging is included. See [automatic workflow and validation](docs/AUTOMATIC_AUDIO_WORKFLOW.md).

@@ -21,5 +21,5 @@ export interface SeparationResult {
   exportZip(filename?: string): Promise<Blob>;
   dispose(): void;
 }
-export interface SeparatorOptions { model?: string; backend?: Backend; maxDuration?: number; maxFileBytes?: number; workerUrl?: string | URL; cache?: boolean; }
+export interface SeparatorOptions { model?: string; backend?: Backend; maxDuration?: number; range?: {start:number;duration:number}; exportWorkerUrl?: string | URL; maxFileBytes?: number; workerUrl?: string | URL; cache?: boolean; }
 export interface JobOptions { signal?: AbortSignal; onProgress?: (event: ProgressEvent) => void; }

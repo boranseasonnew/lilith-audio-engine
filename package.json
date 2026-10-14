@@ -26,6 +26,9 @@
     "typescript": "7.0.2"
   },
   "dependencies": {
+    "@mediabunny/flac-encoder": "1.61.4",
+    "@mediabunny/mp3-encoder": "1.61.4",
+    "mediabunny": "1.61.4",
     "onnxruntime-web": "1.30.0",
     "web-audio-separation": "0.3.1"
   }

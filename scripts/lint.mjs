@@ -3,7 +3,7 @@ import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {execFileSync} from 'node:child_process';
 const root=fileURLToPath(new URL('../',import.meta.url)),write=process.argv.includes('--write');let failed=false,count=0;
-function scan(dir){for(const entry of readdirSync(dir,{withFileTypes:true})){
+function scan(dir){if(dir===join(root,'docs','licenses'))return;for(const entry of readdirSync(dir,{withFileTypes:true})){
   if(['node_modules','.git','dist','test-results'].includes(entry.name))continue;
   const path=join(dir,entry.name);if(entry.isDirectory()){scan(path);continue;}
   if(!/\.(ts|mjs|css|html|json|md|yml)$/.test(path))continue;++count;

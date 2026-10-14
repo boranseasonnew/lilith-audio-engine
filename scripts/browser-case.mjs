@@ -1,27 +1,32 @@
-export default async function browserCase(page,fixture){
-  const requests=[],errors=[];const onRequest=r=>requests.push({method:r.method(),url:r.url()});const onError=e=>errors.push(e.message);
+export default async function browserCase(page,fixture,url='http://127.0.0.1:3340/'){
+  const requests=[],errors=[],downloads=[];const onRequest=r=>requests.push({method:r.method(),url:r.url()});const onError=e=>errors.push(e.message);
   page.on('request',onRequest);page.on('pageerror',onError);
   try{
-    await page.goto('http://127.0.0.1:3340/');
-    if(requests.some(r=>r.url.includes('huggingface.co')))throw Error('Eager model download.');
-    if(await page.locator('.configuration-panel').isVisible())throw Error('Options must stay hidden before upload.');
-    await page.locator('input[type=file]').setInputFiles(fixture);if(!await page.locator('.configuration-panel').isVisible())throw Error('Options must open after upload.');await page.getByRole('button',{name:'Separate audio',exact:true}).click();
-    await page.waitForFunction(()=>document.querySelector('.status')?.textContent==='Ready for playback'||document.querySelector('.status')?.textContent?.startsWith('Unable to process'),null,{timeout:600000});
+    await page.goto(url);await page.locator('#lilith-file').waitFor();
+    if(requests.some(r=>r.url.includes('huggingface.co')||r.url.includes('audio-export-worker.js')))throw Error('Eager model or codec download.');
+    if(await page.locator('#studio select,#studio input[type=radio]').count())throw Error('Manual action/model selection remains.');
+    await page.locator('#lilith-file').setInputFiles(fixture);
+    await page.waitForFunction(()=>document.querySelector('#studio')?.dataset.state==='results'||document.querySelector('.status')?.textContent?.startsWith('Unable to process'),null,{timeout:600000});
     if(await page.locator('.status').textContent()!=='Ready for playback')throw Error(await page.locator('.status').textContent());
-    if(await page.locator('canvas').count()!==2)throw Error('Waveforms missing.');
-    await page.getByRole('button',{name:'Play Both',exact:true}).click();
-    await page.waitForFunction(()=>{const clock=document.querySelector('.player-controls span');return clock&&!clock.textContent.startsWith('0:00');},null,{timeout:15000});
-    const playback=await page.locator('.player-controls').first().locator('span').first().textContent();if(playback.startsWith('0:00'))throw Error('Playback clock did not advance.');
-    const pause=page.getByRole('button',{name:'Pause Both',exact:true});if(await pause.count())await pause.click();
-    await page.locator('.stem-card > input').first().fill('2');await page.locator('.stem-card > input').first().dispatchEvent('input');
-    await page.waitForFunction(()=>document.querySelector('.player-controls span')?.textContent?.startsWith('0:02'));
-    await page.locator('.stem-card').first().getByRole('button',{name:'Mute',exact:true}).click();
-    if(await page.locator('[aria-pressed=true]').count()!==1)throw Error('Mute control failed.');
-    const wavWait=page.waitForEvent('download');await page.locator('.stem-card').first().getByRole('button',{name:'Download WAV',exact:true}).click();const wav=await wavWait;
-    const zipWait=page.waitForEvent('download');await page.getByRole('button',{name:'Download Both · ZIP',exact:true}).click();const zip=await zipWait;
+    const rows=page.locator('.stem-card');if(await rows.locator('canvas').count()!==2)throw Error('Real waveform pair missing.');
+    await rows.nth(0).getByRole('button',{name:'Play',exact:true}).click();
+    await page.waitForFunction(()=>document.querySelector('.track-clock')?.textContent?.startsWith('0:01'),null,{timeout:15000});
+    await rows.nth(1).getByRole('button',{name:'Play',exact:true}).click();
+    const clocks=await rows.locator('.track-clock').allTextContents();if(clocks[0]!==clocks[1]||await page.locator('[data-playing=true]').count()!==2)throw Error('Concurrent aligned playback failed.');
+    await rows.nth(0).getByRole('button',{name:'Pause',exact:true}).click();if(await rows.nth(1).getAttribute('data-playing')!=='true')throw Error('Pausing vocals stopped music.');
+    await rows.nth(1).getByRole('button',{name:'Pause',exact:true}).click();
+    await rows.nth(0).locator('.seek').fill('2');await rows.nth(0).locator('.seek').dispatchEvent('input');
+    await page.waitForFunction(()=>document.querySelector('.track-clock')?.textContent?.startsWith('0:02'));
+    await rows.nth(0).getByRole('button',{name:'Mute',exact:true}).click();if(await rows.nth(0).locator('[aria-pressed=true]').count()!==1)throw Error('Mute failed.');
+    await rows.nth(0).getByRole('button',{name:'Vocals Download',exact:true}).click();await page.keyboard.press('Escape');
+    if(await page.locator('.export-dialog').isVisible()||await page.evaluate(()=>document.activeElement.getAttribute('aria-label'))!=='Vocals Download')throw Error('Dialog dismissal/focus failed.');
+    for(const format of ['mp3','flac','wav']){
+      await rows.nth(0).getByRole('button',{name:'Vocals Download',exact:true}).click();const wait=page.waitForEvent('download',{timeout:60000});await page.locator(`[data-format=${format}]`).click();const d=await wait;
+      if(await d.failure())throw Error('Download failed: '+format);downloads.push(d.suggestedFilename());
+    }
+    const zipWait=page.waitForEvent('download');await page.getByRole('button',{name:'Download Both · ZIP',exact:true}).click();downloads.push((await zipWait).suggestedFilename());
     await page.setViewportSize({width:390,height:844});if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Mobile overflow.');
-    const measurement=await page.locator('.results .model-info').textContent();
     if(requests.some(r=>r.method!=='GET')||errors.length)throw Error(JSON.stringify({requests,errors}));
-    return {status:'PASS',measurement,playback,seek:'0:02',mute:true,waveforms:2,mobileOverflow:false,wavName:wav.suggestedFilename(),zipName:zip.suggestedFilename(),requests,errors};
+    return {status:'PASS',measurement:await page.locator('.results .model-info').textContent(),alignedClocks:clocks,independentPause:true,seek:'0:02',mute:true,dialogFocus:true,downloads,mobileOverflow:false,requests:requests.map(r=>({method:r.method,url:r.url.split('?')[0]})),errors};
   }finally{page.off('request',onRequest);page.off('pageerror',onError);}
 }

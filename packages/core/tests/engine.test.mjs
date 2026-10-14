@@ -36,15 +36,29 @@ test('runtime assets each fit Pages limit and full notices included',()=>{for(co
 
 test('default file ceiling accepts 96 MiB and rejects one byte more',()=>{
   const file=new Blob(['x']);Object.defineProperty(file,'size',{value:96*1024*1024,configurable:true});validateInput(file,{});
-  Object.defineProperty(file,'size',{value:96*1024*1024+1});assert.throws(()=>validateInput(file,{}),e=>e.code==='LIMIT');
+  Object.defineProperty(file,'size',{value:96*1024*1024+1});assert.throws(()=>validateInput(file,{}),e=>e.code==='SIZE');
 });
 test('mock decoder accepts exactly four minutes and rejects longer audio',async()=>{
   const original=globalThis.OfflineAudioContext;let duration=240;
   globalThis.OfflineAudioContext=class {async decodeAudioData(){return {duration,length:duration,sampleRate:1,numberOfChannels:2,getChannelData:()=>new Float32Array(duration)};}};
-  try{const file=new Blob(['x']);const decoded=await decodeAudio(file,1,{});assert.equal(decoded.duration,240);duration=241;await assert.rejects(()=>decodeAudio(file,1,{}),e=>e.code==='LIMIT');}
+  try{const file=new Blob(['x']);const decoded=await decodeAudio(file,1,{});assert.equal(decoded.duration,240);duration=241;await assert.rejects(()=>decodeAudio(file,1,{}),e=>e.code==='DURATION');}
   finally{if(original)globalThis.OfflineAudioContext=original;else delete globalThis.OfflineAudioContext;}
 });
 test('reuse reconstruction keeps prediction buffers and matches copied output',()=>{
   const mix=stereo([.1,-.4,.9]),prediction=stereo([.3,-.7,1.2]);const copied=reconstruct(mix,prediction,1.021);
   const reused=reconstruct(mix,prediction,1.021,true);assert.equal(reused.vocals,prediction);assert.deepEqual(reused.vocals,copied.vocals);assert.deepEqual(reused.instrumental,copied.instrumental);assert.equal(reused.gain,copied.gain);
 });
+
+test('individual playback joins the running clock and pausing one keeps the other alive',async()=>{
+ const f=fakeContext(),p=new SynchronizedPlayer(fakeResult(),f.context);
+ await p.playStem('vocals');assert.equal(f.starts.length,2);assert.deepEqual(f.starts[0],f.starts[1]);
+ f.context.currentTime=3.03;await p.playStem('instrumental');assert.equal(f.starts.length,2);assert.ok(p.isPlaying('vocals'));assert.ok(p.isPlaying('instrumental'));assert.ok(Math.abs(p.currentTime-2)<1e-6);
+ p.pauseStem('vocals');assert.equal(p.isPlaying('vocals'),false);assert.equal(p.isPlaying('instrumental'),true);assert.ok(f.nodes.every(n=>!n.stopped));
+ p.pauseStem('instrumental');assert.equal(p.playing,false);assert.ok(f.nodes.every(n=>n.stopped));await p.dispose();
+});
+test('export and range code is lazy and unknown formats are rejected',async()=>{
+ const source=readFileSync(new URL('../dist/index.js',import.meta.url),'utf8');assert.match(source,/import\(/);assert.doesNotMatch(source,/registerMp3Encoder|registerFlacEncoder/);
+ const {exportAudio}=await import('../dist/index.js');await assert.rejects(()=>exportAudio(fakeResult().vocals,'invalid'),e=>e.code==='OUTPUT');
+});
+
+test('pause both then play a single stem does not resume the other stem',async()=>{const f=fakeContext(),p=new SynchronizedPlayer(fakeResult(),f.context);await p.play('both');p.pause();await p.playStem('vocals');assert.equal(p.isPlaying('vocals'),true);assert.equal(p.isPlaying('instrumental'),false);await p.seek(2);assert.equal(p.isPlaying('instrumental'),false);await p.dispose();});

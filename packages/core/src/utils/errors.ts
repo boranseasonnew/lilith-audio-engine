@@ -1,4 +1,4 @@
-export type ErrorCode = 'ABORTED'|'BUSY'|'DISPOSED'|'LIMIT'|'DECODE'|'MODEL'|'INTEGRITY'|'RUNTIME'|'OUTPUT'|'WORKER'|'UNSUPPORTED';
+export type ErrorCode = 'ABORTED'|'BUSY'|'DISPOSED'|'LIMIT'|'SIZE'|'DURATION'|'CHANNELS'|'DECODE'|'MODEL'|'INTEGRITY'|'RUNTIME'|'OUTPUT'|'WORKER'|'UNSUPPORTED';
 export class AudioEngineError extends Error {
   constructor(public readonly code: ErrorCode, message: string, options?: ErrorOptions) { super(message, options); this.name='AudioEngineError'; }
 }

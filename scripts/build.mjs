@@ -12,7 +12,8 @@ const runtime={parts,bytes:binary.length,mjs:'./runtime/ort-wasm-simd-threaded.a
 copyFileSync(path('node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.asyncify.mjs'),path(output+'runtime/ort-wasm-simd-threaded.asyncify.mjs'));
 writeFileSync(path(output+'runtime.json'),JSON.stringify(runtime,null,2)+'\n');
 const common={bundle:true,format:'esm',platform:'browser',target:'es2022',legalComments:'eof'};
-await build({...common,entryPoints:[path('packages/core/src/index.ts')],outfile:path(output+'index.js')});
+await build({...common,entryPoints:{index:path('packages/core/src/index.ts')},outdir:path(output),splitting:true,chunkNames:'audio-io-[hash]'});
+await build({...common,entryPoints:[path('packages/core/src/workers/audio-export-worker.ts')],outfile:path(output+'audio-export-worker.js'),minify:true});
 await build({...common,entryPoints:[path('packages/core/src/workers/separation-worker.ts')],outfile:path(output+'separation-worker.js'),minify:true,alias:{'onnxruntime-web':'onnxruntime-web/webgpu'},define:{__RUNTIME__:JSON.stringify(runtime)}});
 for(const file of ['LICENSE','THIRD_PARTY_NOTICES.md','README.md'])copyFileSync(path(file),path('packages/core/'+file));
 cpSync(path('docs/licenses'),path('packages/core/dist/licenses'),{recursive:true});
